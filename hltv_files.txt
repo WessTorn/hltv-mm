@@ -1,0 +1,13 @@
+./hltv
+./filesystem_stdio.so
+./proxy.so
+
+
+./libsteam_api.so
+./core.so
+
+./hltv.cfg (./hltv +connect 0.0.0.0:00000 -port 00000 +exec hltv.cfg)
+
+
+./steamclient.so
+(user)/.steam/sdk32/libsteam.so
