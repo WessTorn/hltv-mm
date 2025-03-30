@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 
 	metamod "github.com/et-nik/metamod-go"
 )
@@ -28,15 +29,54 @@ func init() {
 		panic(err)
 	}
 
-	err = metamod.SetMetaCallbacks(&metamod.MetaCallbacks{
-		MetaInit:   MetaInit,
-		MetaQuery:  MetaQuery,
-		MetaAttach: MetaAttach,
-		MetaDetach: func(_ int, _ int) int {
-			fmt.Println("Called MetaDetach")
+	hltv := NewHltv()
 
-			return 1
+	err = metamod.SetApiCallbacks(&metamod.APICallbacks{
+		GameDLLInit: func() metamod.APICallbackResult {
+			err := hltv.Init()
+			if err != nil {
+				// TODO: logger
+
+				return metamod.APICallbackResultHandled
+			}
+
+			err = hltv.GetPath()
+			if err != nil {
+				// TODO: logger
+				return metamod.APICallbackResultHandled
+			}
+
+			err = hltv.CheckHltvFiles()
+			if err != nil {
+				// TODO: logger
+				return metamod.APICallbackResultHandled
+			}
+
+			fmt.Println("HLTV initialized")
+
+			return metamod.APICallbackResultHandled
 		},
+		ServerDeactivate: func() metamod.APICallbackResult {
+			// err := plugin.Reset()
+			// if err != nil {
+			// 	slog.Error("Failed to reset plugin: ", "error", err)
+
+			// 	return metamod.APICallbackResultHandled
+			// }
+
+			fmt.Println("Server deactivated")
+
+			return metamod.APICallbackResultHandled
+		},
+	})
+
+	if err != nil {
+		panic(err)
+	}
+
+	err = metamod.SetMetaCallbacks(&metamod.MetaCallbacks{
+		MetaQuery:  metaQueryFn(hltv),
+		MetaDetach: metaDetachFn(hltv),
 	})
 	if err != nil {
 		panic(err)
@@ -45,44 +85,39 @@ func init() {
 
 func main() {}
 
-func MetaInit() {
-	fmt.Println()
-	fmt.Println("called MetaInit")
-	fmt.Println()
-}
+func metaQueryFn(p *HLTV) func() int {
+	return func() int {
+		engineFuncs, err := metamod.GetEngineFuncs()
+		if err != nil {
+			slog.Error("Failed to get engine funcs: ", "error", err)
 
-func MetaQuery() int {
-	fmt.Println()
-	fmt.Println("called MetaQuery")
-	fmt.Println()
-
-	var err error
-
-	engineFuncs, err = metamod.GetEngineFuncs()
-	if err != nil {
-		fmt.Println("Failed to get engine funcs:", err)
-	}
-
-	return 1
-}
-
-func MetaAttach(_ int) int {
-	fmt.Println()
-	fmt.Println("called MetaAttach")
-	fmt.Println()
-
-	engineFuncs.AddServerCommand("hltv", func(argc int, argv ...string) {
-		if argc < 2 {
-			fmt.Println("Usage: hltv <text>")
-			return
+			return 0
 		}
+		// TODO: init logger
 
-		fmt.Println()
-		fmt.Println("=====================================")
-		fmt.Println("HLTV", argv[1])
-		fmt.Println("=====================================")
-		fmt.Println()
-	})
+		gameDir := engineFuncs.GetGameDir()
+		fmt.Println("HLTV game dir: ", gameDir)
 
-	return 1
+		// TODO: load config
+
+		// // Запускаем http сервер
+		// go func() {
+		// 	runtime.LockOSThread()
+
+		// 	err := p.RunServer(gameDir)
+		// 	if err != nil {
+		// 		panic(err)
+		// 	}
+		// }()
+
+		return 1
+	}
+}
+
+func metaDetachFn(p *HLTV) func(now int, reason int) int {
+	return func(now int, reason int) int {
+		fmt.Println("HLTV meta detach")
+
+		return 1
+	}
 }
