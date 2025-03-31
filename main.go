@@ -3,10 +3,11 @@ package main
 //CGO_ENABLED=1 GOOS=linux GOARCH=386 go build -o gohltv.so -buildvcs=false -buildmode=c-shared
 
 import (
-	"fmt"
 	"log/slog"
 
 	metamod "github.com/et-nik/metamod-go"
+
+	log "hltv-mm/logger"
 )
 
 var (
@@ -14,10 +15,15 @@ var (
 )
 
 func init() {
-	err := metamod.SetPluginInfo(&metamod.PluginInfo{
+	err := log.Init("./log/")
+	if err != nil {
+		log.Error.Fatal(err)
+	}
+
+	err = metamod.SetPluginInfo(&metamod.PluginInfo{
 		InterfaceVersion: metamod.MetaInterfaceVersion,
 		Name:             "Metamod Go HLTV",
-		Version:          "v0.0.0",
+		Version:          "dev",
 		Date:             "-",
 		Author:           "WessTorn",
 		Url:              "https://github.com/WessTorn/hltv-mm",
@@ -26,8 +32,10 @@ func init() {
 		Unloadable:       metamod.PluginLoadTimeAnyTime,
 	})
 	if err != nil {
-		panic(err)
+		log.Error.Fatal(err)
 	}
+
+	log.Info.Println("Init hltv project")
 
 	hltv := NewHltv()
 
@@ -35,24 +43,24 @@ func init() {
 		GameDLLInit: func() metamod.APICallbackResult {
 			err := hltv.Init()
 			if err != nil {
-				// TODO: logger
+				log.Error.Fatal("Failed to init hltv: ", err)
 
 				return metamod.APICallbackResultHandled
 			}
 
 			err = hltv.GetPath()
 			if err != nil {
-				// TODO: logger
+				log.Error.Fatal("Failed to get path: ", err)
 				return metamod.APICallbackResultHandled
 			}
 
 			err = hltv.CheckHltvFiles()
 			if err != nil {
-				// TODO: logger
+				log.Error.Fatal("Failed to check hltv files: ", err)
 				return metamod.APICallbackResultHandled
 			}
 
-			fmt.Println("HLTV initialized")
+			log.Info.Println("HLTV initialized")
 
 			return metamod.APICallbackResultHandled
 		},
@@ -64,14 +72,14 @@ func init() {
 			// 	return metamod.APICallbackResultHandled
 			// }
 
-			fmt.Println("Server deactivated")
+			log.Info.Println("Server deactivated")
 
 			return metamod.APICallbackResultHandled
 		},
 	})
 
 	if err != nil {
-		panic(err)
+		log.Error.Fatal(err)
 	}
 
 	err = metamod.SetMetaCallbacks(&metamod.MetaCallbacks{
@@ -79,7 +87,7 @@ func init() {
 		MetaDetach: metaDetachFn(hltv),
 	})
 	if err != nil {
-		panic(err)
+		log.Error.Fatal(err)
 	}
 }
 
@@ -96,7 +104,7 @@ func metaQueryFn(p *HLTV) func() int {
 		// TODO: init logger
 
 		gameDir := engineFuncs.GetGameDir()
-		fmt.Println("HLTV game dir: ", gameDir)
+		log.Info.Println("HLTV game dir: ", gameDir)
 
 		// TODO: load config
 
@@ -116,7 +124,7 @@ func metaQueryFn(p *HLTV) func() int {
 
 func metaDetachFn(p *HLTV) func(now int, reason int) int {
 	return func(now int, reason int) int {
-		fmt.Println("HLTV meta detach")
+		log.Info.Println("HLTV meta detach")
 
 		return 1
 	}

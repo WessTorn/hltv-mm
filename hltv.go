@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	log "hltv-mm/logger"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -47,7 +48,7 @@ func (hltv *HLTV) CheckHltvFiles() error {
 	}
 
 	ldLibraryPath := os.Getenv("LD_LIBRARY_PATH")
-	fmt.Println("LD_LIBRARY_PATH:", ldLibraryPath)
+	log.Info.Println("LD_LIBRARY_PATH:", ldLibraryPath)
 
 	searchPaths := []string{hltv.path}
 
@@ -58,9 +59,9 @@ func (hltv *HLTV) CheckHltvFiles() error {
 		}
 	}
 
-	fmt.Println("Checking files in directories:")
+	log.Info.Println("Checking files in directories:", ldLibraryPath)
 	for _, p := range searchPaths {
-		fmt.Println(" -", p)
+		log.Info.Println(" -", p)
 	}
 
 	missingFiles := []string{}
@@ -80,13 +81,13 @@ func (hltv *HLTV) CheckHltvFiles() error {
 	}
 
 	if len(missingFiles) > 0 {
-		fmt.Println("Missing required files:")
+		log.Warning.Println("Missing required files:")
 		for _, file := range missingFiles {
-			fmt.Println(" -", file)
+			log.Warning.Println(" -", file)
 		}
-		return fmt.Errorf("some required files are missing")
+		return nil
 	}
 
-	fmt.Println("All required files are present.")
+	log.Info.Println("All required files are present.")
 	return nil
 }
